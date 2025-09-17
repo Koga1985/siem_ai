@@ -1,0 +1,22 @@
+namespace: koga1985
+name: siem_ai
+version: 0.1.0
+readme: README.md
+authors:
+  - "Dewain Smith <you@example.com>"
+description: "On‑prem AI for SIEM — GPU/CPU auto, supply-chain checks, observability, and DoD‑friendly defaults."
+license: Apache-2.0
+tags: [siem, security, ai, gpu, observability, dod, stig, fips]
+repository: "https://github.com/Koga1985/siem_ai"
+issues: "https://github.com/Koga1985/siem_ai/issues"
+build_ignore:
+  - .github/
+  - .gitignore
+  - CHANGELOG.md
+  - SECURITY.md
+  - CONTRIBUTING.md
+  - CODEOWNERS
+  - inventories/
+  - group_vars/
+  - scripts/
+  - playbooks/
