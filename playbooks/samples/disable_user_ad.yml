@@ -1,0 +1,16 @@
+---
+- name: Disable compromised user in AD
+  hosts: "{{ target | default('ad_domain') }}"
+  gather_facts: no
+  vars:
+    sam_account: "{{ user | default('test.user') }}"
+    mitre_techniques: ["T1531"]
+  pre_tasks:
+    - name: Require approval flag
+      assert:
+        that: [ approve_change | default(false) ]
+  tasks:
+    - name: (Sample) Disable user (placeholder)
+      debug:
+        msg: "Would disable user {{ sam_account }} in AD"
+      check_mode: yes

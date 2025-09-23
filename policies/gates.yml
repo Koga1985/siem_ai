@@ -1,0 +1,6 @@
+---
+stages:
+  - lint
+  - molecule
+  - opa
+  - checkmode

@@ -1,0 +1,11 @@
+---
+- name: Normalize raw event and enqueue for generation
+  hosts: localhost
+  gather_facts: no
+  vars:
+    raw_event: {}
+  tasks:
+    - name: Write event to queue directory
+      copy:
+        dest: "services/event_bridge/queue/{{ raw_event.event.id | default(ansible_date_time.epoch) }}.json"
+        content: "{{ raw_event | to_nice_json }}"

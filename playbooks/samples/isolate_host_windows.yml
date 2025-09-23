@@ -1,0 +1,25 @@
+---
+- name: Isolate Windows host from network (Egress only)
+  hosts: "{{ target | default('windows_quarantine') }}"
+  gather_facts: no
+  vars:
+    ticket_id: "{{ change_ticket | default('CHG-PLACEHOLDER') }}"
+    mitre_techniques: ["T1562"]
+  pre_tasks:
+    - name: Verify approval flag
+      assert:
+        that: [ approve_change | default(false) ]
+        fail_msg: "Change not approved. Set approve_change=true after CAB."
+  tasks:
+    - name: Ensure Windows Defender Firewall inbound block rule exists
+      ansible.windows.win_firewall_rule:
+        name: "SEIM-AI-ISOLATE"
+        action: block
+        direction: in
+        enabled: yes
+        state: present
+      check_mode: yes
+  handlers:
+    - name: rollback
+      debug:
+        msg: "Remove firewall rule 'SEIM-AI-ISOLATE' if created."

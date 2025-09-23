@@ -1,0 +1,17 @@
+---
+- name: Patch vulnerable package on Linux
+  hosts: "{{ target | default('linux_patch') }}"
+  gather_facts: yes
+  vars:
+    pkg: "{{ pkg | default('openssl') }}"
+    mitre_techniques: ["T1190"]
+  pre_tasks:
+    - name: Require approval flag
+      assert:
+        that: [ approve_change | default(false) ]
+  tasks:
+    - name: Ensure package is latest
+      package:
+        name: "{{ pkg }}"
+        state: latest
+      check_mode: yes

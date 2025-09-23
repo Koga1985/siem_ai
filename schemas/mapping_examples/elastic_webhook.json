@@ -1,0 +1,10 @@
+{
+  "map": {
+    "@timestamp": "@timestamp",
+    "event.category": "event.category",
+    "alert.severity": "event.severity",
+    "alert.rule": "rule.name",
+    "host.hostname": "host.name",
+    "host.ip": "source.ip"
+  }
+}

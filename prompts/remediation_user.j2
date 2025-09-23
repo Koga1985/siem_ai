@@ -1,0 +1,6 @@
+Generate a remediation playbook for incident {{ incident_id }} with details:
+Host: {{ host }}
+Severity: {{ severity }}
+Rule: {{ rule_name }}
+Techniques: {{ techniques|join(', ') }}
+Proposed remediation: {{ remediation_hint }}

@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "severity": {
+          "type": "string"
+        },
+        "check_mode": {
+          "type": "boolean"
+        },
+        "cab_approved": {
+          "type": "boolean"
+        },
+        "dual_control": {
+          "type": "boolean"
+        },
+        "inventory": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity",
+        "check_mode",
+        "inventory"
+      ]
+    }
+  },
+  "required": [
+    "meta"
+  ]
+}

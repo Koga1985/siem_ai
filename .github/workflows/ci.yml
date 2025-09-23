@@ -1,0 +1,19 @@
+name: seim-ai-ci
+on: [pull_request]
+jobs:
+  lint-test-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Ansible
+        run: pip install ansible ansible-lint
+      - name: Lint
+        run: ./ci/lint.sh
+      - name: OPA Gate
+        run: ./ci/opa.sh
+      - name: Check-mode Smoke
+        run: ./ci/checkmode.sh

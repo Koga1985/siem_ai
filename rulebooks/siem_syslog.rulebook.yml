@@ -1,0 +1,14 @@
+- name: seim_ai_syslog
+  hosts: localhost
+  sources:
+    - ansible.eda.syslog:
+        host: 0.0.0.0
+        port: 514
+  rules:
+    - name: normalize-syslog
+      condition: event.message is defined
+      action:
+        run_playbook:
+          name: services/event_bridge/normalize_and_enqueue.yml
+          extra_vars:
+            raw_event: "{{ event }}"

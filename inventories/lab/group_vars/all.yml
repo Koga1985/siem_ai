@@ -1,0 +1,10 @@
+---
+approve_change: false
+change_ticket: "CHG-PLACEHOLDER"
+risk_thresholds:
+  medium_max: 6
+  high_min: 7
+
+# Example external integrations (stubs)
+acas_enabled: false
+servicenow_enabled: false

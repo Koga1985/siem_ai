@@ -1,0 +1,58 @@
+{
+  "required": [
+    "@timestamp",
+    "event",
+    "alert",
+    "host"
+  ],
+  "properties": {
+    "@timestamp": {
+      "type": "string"
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        }
+      }
+    },
+    "alert": {
+      "type": "object",
+      "properties": {
+        "severity": {
+          "type": "integer"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "risk_score": {
+          "type": "number"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "host": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        }
+      }
+    },
+    "indicator": {
+      "type": "object"
+    }
+  }
+}

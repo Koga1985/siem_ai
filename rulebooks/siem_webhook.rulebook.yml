@@ -1,0 +1,15 @@
+- name: seim_ai_webhook
+  hosts: localhost
+  sources:
+    - ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+        token: ""
+  rules:
+    - name: create-incident-from-alert
+      condition: event.alert.severity is defined
+      action:
+        run_playbook:
+          name: services/event_bridge/normalize_and_enqueue.yml
+          extra_vars:
+            raw_event: "{{ event }}"

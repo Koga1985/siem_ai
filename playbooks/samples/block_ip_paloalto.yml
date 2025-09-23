@@ -1,0 +1,16 @@
+---
+- name: Block malicious IP on Palo Alto
+  hosts: "{{ target | default('firewalls_paloalto') }}"
+  gather_facts: no
+  vars:
+    bad_ip: "{{ bad_ip | default('198.51.100.13') }}"
+    mitre_techniques: ["T1562"]
+  pre_tasks:
+    - name: Require approval flag
+      assert:
+        that: [ approve_change | default(false) ]
+  tasks:
+    - name: (Sample) Block IP via address object (placeholder)
+      debug:
+        msg: "Would create address object and add to block list: {{ bad_ip }}"
+      check_mode: yes

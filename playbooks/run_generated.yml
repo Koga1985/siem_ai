@@ -1,0 +1,19 @@
+---
+- name: Run last approved generated playbook
+  hosts: localhost
+  gather_facts: no
+  vars:
+    incident: "{{ incident | default(lookup('env', 'INCIDENT_ID')) }}"
+    lib_path: "playbooks/_library"
+  tasks:
+    - name: Find playbook for incident
+      find:
+        paths: "{{ lib_path }}"
+        patterns: "{{ incident }}*.yml"
+      register: f
+    - name: Fail if not found
+      fail:
+        msg: "No generated playbook for incident {{ incident }}"
+      when: f.matched == 0
+    - name: Include and run
+      include_tasks: "{{ f.files[0].path }}"
