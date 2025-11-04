@@ -1,3 +1,5 @@
+# Lab-only configuration override
+# Usage: ANSIBLE_CONFIG=ansible.cfg.lab ansible-playbook ...
 [defaults]
 inventory = inventories/lab/hosts.ini
 roles_path = roles
@@ -6,20 +8,15 @@ stdout_callback = yaml
 force_color = true
 nocows = 1
 interpreter_python = auto_silent
-# SECURITY: Enable host key checking to prevent MITM attacks
-# Set to False ONLY in isolated lab environments via environment variable
-host_key_checking = True
-# Keep connection retries reasonable
+# ONLY for isolated lab environments
+host_key_checking = False
 timeout = 30
-# Log all playbook runs for audit trail
-log_path = /var/log/ansible/ansible.log
+log_path = ./logs/ansible.log
 
 [privilege_escalation]
 become = True
 become_ask_pass = False
 
 [ssh_connection]
-# Use modern SSH settings
 ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=60
-# Use pipelining for better performance (requires sudo without tty)
 pipelining = True

@@ -48,4 +48,54 @@ ansible-playbook playbooks/run_generated.yml -e incident=<INCIDENT_ID> -i invent
 
 ---
 
-Made for labs first. Use at your own risk in production; tighten policies before expanding scope.
+## Production Readiness Status
+
+**Lab/Testing**: ✅ **Ready**
+**Production**: ⚠️ **See [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT.md)**
+
+This codebase has been significantly hardened for production use with comprehensive security improvements, structured logging, error handling, authentication, rate limiting, and safety checks. However, production deployment requires additional configuration:
+
+**Required Before Production:**
+- Configure TLS/HTTPS with valid certificates
+- Set up secrets management (Vault/AWS Secrets Manager)
+- Deploy message broker (Redis/RabbitMQ) to replace file queue
+- Configure external log aggregation (ELK/Splunk)
+- Set up monitoring and alerting (Prometheus/Grafana)
+- Complete security review and penetration testing
+- Test backup and disaster recovery procedures
+
+**See Full Checklist:** [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md)
+
+---
+
+## What's New (Production Hardening)
+
+### Security Enhancements
+- ✅ **API Key Authentication**: Optional authentication for webhook endpoint
+- ✅ **Rate Limiting**: Configurable rate limits to prevent abuse
+- ✅ **Comprehensive Safety Checks**: YAML parsing, dangerous pattern detection, module validation
+- ✅ **Non-Root Containers**: All services run as non-root users
+- ✅ **Security Best Practices**: Read-only filesystems where possible, no-new-privileges
+
+### Reliability Improvements
+- ✅ **Structured JSON Logging**: All services with audit trails
+- ✅ **Comprehensive Error Handling**: Graceful degradation and retry logic
+- ✅ **Health Check Endpoints**: Kubernetes/Docker Swarm compatible
+- ✅ **Resource Limits**: CPU and memory limits configured
+- ✅ **Health Checks**: Liveness and readiness probes
+
+### Code Quality
+- ✅ **Unit Tests**: Comprehensive test coverage with pytest
+- ✅ **Improved CI/CD**: Security scanning, linting, testing (no more || true)
+- ✅ **Pinned Dependencies**: All versions locked for reproducibility
+- ✅ **Type Hints**: Better code documentation
+
+### Operations
+- ✅ **Production Documentation**: Comprehensive deployment and security guides
+- ✅ **Secrets Management**: Examples for Vault, AWS, Azure
+- ✅ **Monitoring Ready**: Prometheus metrics and Grafana dashboards
+- ✅ **Docker Compose Production**: Production-ready compose file with volumes and networks
+
+---
+
+Made for labs first. **Now production-capable with proper configuration** - see deployment guide before expanding scope.

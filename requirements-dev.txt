@@ -1,0 +1,13 @@
+# Development and testing dependencies
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+safety==2.3.5
+
+# Include all service requirements
+-r services/event_bridge/requirements.txt
+-r services/ai_generator/requirements.txt
+-r services/orchestrator/requirements.txt

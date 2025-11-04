@@ -1,2 +1,19 @@
-flask
-jsonschema
+# Event Bridge Dependencies
+# Pin versions for reproducible builds and security tracking
+flask==3.0.0
+werkzeug==3.0.1
+jsonschema==4.20.0
+attrs==23.1.0
+jsonschema-specifications==2023.11.2
+referencing==0.31.1
+rpds-py==0.13.2
+
+# Security and monitoring
+python-json-logger==2.0.7
+requests==2.31.0
+urllib3==2.1.0
+certifi==2023.11.17
+
+# Rate limiting
+flask-limiter==3.5.0
+limits==3.7.0
