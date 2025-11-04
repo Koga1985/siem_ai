@@ -1,35 +1,135 @@
 version: "3.8"
+
+networks:
+  siem_internal:
+    driver: bridge
+
+volumes:
+  queue_data:
+  playbook_library:
+  logs:
+
 services:
   event_bridge:
     build:
       context: ../
       dockerfile: docker/event-bridge.Dockerfile
+    container_name: siem_event_bridge
     environment:
       - WEBHOOK_PORT=${WEBHOOK_PORT:-5000}
       - SYSLOG_UDP_PORT=${SYSLOG_UDP_PORT:-514}
+      - API_KEY=${API_KEY:-}
+      - RATE_LIMIT=${RATE_LIMIT:-100 per minute}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=/var/log/siem/event_bridge.log
     ports:
       - "${WEBHOOK_PORT:-5000}:5000"
       - "${SYSLOG_UDP_PORT:-514}:514/udp"
     volumes:
-      - ../:/repo
+      - queue_data:/repo/services/event_bridge/queue
+      - logs:/var/log/siem
+      - ../schemas:/repo/schemas:ro
+    networks:
+      - siem_internal
+    restart: unless-stopped
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: false  # Needs to write to queue
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   ai_generator:
     build:
       context: ../
       dockerfile: docker/ai-generator.Dockerfile
+    container_name: siem_ai_generator
     environment:
       - MODEL_MODE=${MODEL_MODE:-local}
-      - LLM_ENDPOINT=${LLM_ENDPOINT}
-      - API_KEY=${API_KEY}
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=/var/log/siem/ai_generator.log
+      - POLL_INTERVAL=${POLL_INTERVAL:-2}
     volumes:
-      - ../:/repo
-  runner:
+      - queue_data:/repo/services/event_bridge/queue
+      - playbook_library:/repo/playbooks/_library
+      - logs:/var/log/siem
+      - ../playbooks/samples:/repo/playbooks/samples:ro
+      - ../prompts:/repo/prompts:ro
+    networks:
+      - siem_internal
+    restart: unless-stopped
+    depends_on:
+      event_bridge:
+        condition: service_healthy
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100M
+
+  orchestrator:
     build:
       context: ../
       dockerfile: docker/runner.Dockerfile
+    container_name: siem_orchestrator
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=/var/log/siem/orchestrator.log
     ports:
       - "${REVIEW_UI_PORT:-8088}:8088"
     volumes:
-      - ../:/repo
+      - playbook_library:/repo/playbooks/_library
+      - logs:/var/log/siem
+    networks:
+      - siem_internal
+    restart: unless-stopped
     depends_on:
-      - event_bridge
-      - ai_generator
+      event_bridge:
+        condition: service_healthy
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:noexec,nosuid,size=50M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8088/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
