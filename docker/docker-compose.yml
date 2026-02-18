@@ -18,6 +18,8 @@ services:
     environment:
       - WEBHOOK_PORT=${WEBHOOK_PORT:-5000}
       - SYSLOG_UDP_PORT=${SYSLOG_UDP_PORT:-514}
+      - SYSLOG_TCP_PORT=${SYSLOG_TCP_PORT:-601}
+      - SIEM_TYPE=${SIEM_TYPE:-auto}
       - API_KEY=${API_KEY:-}
       - RATE_LIMIT=${RATE_LIMIT:-100 per minute}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -25,6 +27,7 @@ services:
     ports:
       - "${WEBHOOK_PORT:-5000}:5000"
       - "${SYSLOG_UDP_PORT:-514}:514/udp"
+      - "${SYSLOG_TCP_PORT:-601}:601/tcp"
     volumes:
       - queue_data:/repo/services/event_bridge/queue
       - logs:/var/log/siem
@@ -99,6 +102,8 @@ services:
       dockerfile: docker/runner.Dockerfile
     container_name: siem_orchestrator
     environment:
+      - REVIEW_UI_PORT=${REVIEW_UI_PORT:-8088}
+      - LIB_DIR=/repo/playbooks/_library
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_FILE=/var/log/siem/orchestrator.log
     ports:
