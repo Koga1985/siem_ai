@@ -14,8 +14,10 @@ from functools import wraps
 sys.path.insert(0, '/repo/services')
 from common.logging_config import setup_logging, log_audit_event
 
-# Import normalizers
-sys.path.insert(0, '/repo/services/event_bridge')
+# Import normalizers — use __file__ so this works both in the container
+# (WORKDIR=/app) and in local development (services/event_bridge/)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
 from normalizers.syslog_parser import parse as parse_syslog
 from normalizers.splunk import map_splunk_hec
 from normalizers.elastic import map_elastic
@@ -123,6 +125,20 @@ def enqueue(evt: dict) -> str:
 # Normalisation helper
 # ---------------------------------------------------------------------------
 
+def _normalise_one(evt: dict) -> dict:
+    """Route a single dict event through the appropriate normalizer."""
+    if SIEM_TYPE == "splunk" or _looks_like_splunk_hec(evt):
+        return map_splunk_hec(evt)
+    if SIEM_TYPE == "elastic" or _looks_like_elastic(evt):
+        return map_elastic(evt)
+    # Try native ECS-min; fall back to generic wrap
+    try:
+        validate(evt, ECS_MIN)
+        return evt
+    except ValidationError:
+        return _wrap_generic(evt)
+
+
 def _wrap_generic(evt: dict) -> dict:
     """Wrap a non-ECS-compliant JSON event into ECS-min format."""
     return {
@@ -192,19 +208,23 @@ def webhook():
             'siem_type': SIEM_TYPE,
         })
 
-        # Route to the right normalizer
-        if SIEM_TYPE == "splunk" or _looks_like_splunk_hec(evt):
-            normalised = map_splunk_hec(evt)
-        elif SIEM_TYPE == "elastic" or _looks_like_elastic(evt):
-            normalised = map_elastic(evt)
-        else:
-            # Try native ECS-min first
-            try:
-                validate(evt, ECS_MIN)
-                normalised = evt
-            except ValidationError:
-                normalised = _wrap_generic(evt)
+        # Handle JSON arrays — enqueue each element and return all IDs
+        if isinstance(evt, list):
+            if not evt:
+                return jsonify({"error": "Empty array"}), 400
+            ids = []
+            for item in evt:
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    ids.append(enqueue(_normalise_one(item)))
+                except Exception as exc:
+                    logger.warning("Skipping array item", extra={'error': str(exc)})
+            if not ids:
+                return jsonify({"error": "No valid events in array"}), 400
+            return jsonify({"status": "queued", "count": len(ids), "ids": ids}), 202
 
+        normalised = _normalise_one(evt)
         eid = enqueue(normalised)
         log_audit_event(logger, 'webhook_received',
                         event_id=eid, source_ip=request.remote_addr)
