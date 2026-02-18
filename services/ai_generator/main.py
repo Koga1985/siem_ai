@@ -1,19 +1,18 @@
-import os
-import json
 import glob
-import time
-import yaml
+import json
+import os
 import sys
+import time
 from datetime import datetime
-from jinja2 import Template
-from safety_checks import approve_playbook, SafetyCheckResult
+
+from safety_checks import approve_playbook  # noqa: E402
 
 # Add parent directory to path for common imports
-sys.path.insert(0, '/repo/services')
-from common.logging_config import setup_logging, log_audit_event
+sys.path.insert(0, "/repo/services")  # noqa: E402
+from common.logging_config import log_audit_event, setup_logging  # noqa: E402
 
 # Setup structured logging
-logger = setup_logging('ai_generator')
+logger = setup_logging("ai_generator")
 
 # Configuration
 QUEUE_DIR = os.getenv("QUEUE_DIR", "/repo/services/event_bridge/queue")
@@ -25,9 +24,11 @@ MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
 # Create library directory
 try:
     os.makedirs(LIB_DIR, exist_ok=True)
-    logger.info("Library directory initialized", extra={'path': LIB_DIR})
+    logger.info("Library directory initialized", extra={"path": LIB_DIR})
 except Exception as e:
-    logger.error("Failed to create library directory", extra={'path': LIB_DIR, 'error': str(e)})
+    logger.error(
+        "Failed to create library directory", extra={"path": LIB_DIR, "error": str(e)}
+    )
     sys.exit(1)
 
 
@@ -49,11 +50,10 @@ def synthesize(evt: dict) -> str:
         cat = evt.get("event", {}).get("category", "unknown")
         event_id = evt.get("event", {}).get("id", "unknown")
 
-        logger.info("Synthesizing playbook", extra={
-            'event_id': event_id,
-            'severity': sev,
-            'category': cat
-        })
+        logger.info(
+            "Synthesizing playbook",
+            extra={"event_id": event_id, "severity": sev, "category": cat},
+        )
 
         # Select appropriate base playbook
         if cat == "malware" or sev >= 7:
@@ -74,22 +74,28 @@ def synthesize(evt: dict) -> str:
             with open(base, "r") as f:
                 play = f.read()
         except FileNotFoundError:
-            logger.error("Base playbook not found", extra={'path': base})
+            logger.error("Base playbook not found", extra={"path": base})
             raise
 
-        logger.info("Playbook synthesized", extra={
-            'event_id': event_id,
-            'response_type': response_type,
-            'base_playbook': base
-        })
+        logger.info(
+            "Playbook synthesized",
+            extra={
+                "event_id": event_id,
+                "response_type": response_type,
+                "base_playbook": base,
+            },
+        )
 
         return play
 
     except Exception as e:
-        logger.error("Synthesis failed", extra={
-            'event_id': evt.get("event", {}).get("id", "unknown"),
-            'error': str(e)
-        })
+        logger.error(
+            "Synthesis failed",
+            extra={
+                "event_id": evt.get("event", {}).get("id", "unknown"),
+                "error": str(e),
+            },
+        )
         raise
 
 
@@ -144,7 +150,8 @@ def write_artifacts(evt: dict, play_yaml: str) -> str:
 1. **Dry Run**: `ansible-playbook playbooks/run_generated.yml -e incident={inc} -i inventories/lab/hosts.ini --check`
 2. **Review Output**: Verify no unexpected changes
 3. **Approve**: Click approve in UI (http://localhost:8088)
-4. **Execute**: `ansible-playbook playbooks/run_generated.yml -e incident={inc} -e approve_change=true -i inventories/lab/hosts.ini`
+4. **Execute**: `ansible-playbook playbooks/run_generated.yml \
+   -e incident={inc} -e approve_change=true -i inventories/lab/hosts.ini`
 5. **Validate**: Confirm remediation successful
 6. **Rollback if needed**: Refer to playbook handlers
 
@@ -158,26 +165,35 @@ def write_artifacts(evt: dict, play_yaml: str) -> str:
         with open(plan_path, "w") as f:
             f.write(change_plan)
 
-        logger.info("Artifacts written", extra={
-            'incident_id': inc,
-            'playbook': pb_path,
-            'evidence': evidence_path,
-            'plan': plan_path
-        })
+        logger.info(
+            "Artifacts written",
+            extra={
+                "incident_id": inc,
+                "playbook": pb_path,
+                "evidence": evidence_path,
+                "plan": plan_path,
+            },
+        )
 
-        log_audit_event(logger, 'playbook_generated',
-                       incident_id=inc,
-                       playbook_path=pb_path,
-                       severity=severity,
-                       category=category)
+        log_audit_event(
+            logger,
+            "playbook_generated",
+            incident_id=inc,
+            playbook_path=pb_path,
+            severity=severity,
+            category=category,
+        )
 
         return inc
 
     except Exception as e:
-        logger.error("Failed to write artifacts", extra={
-            'incident_id': evt.get("event", {}).get("id", "unknown"),
-            'error': str(e)
-        })
+        logger.error(
+            "Failed to write artifacts",
+            extra={
+                "incident_id": evt.get("event", {}).get("id", "unknown"),
+                "error": str(e),
+            },
+        )
         raise
 
 
@@ -199,10 +215,9 @@ def process_event(path: str) -> bool:
 
         event_id = evt.get("event", {}).get("id", "unknown")
 
-        logger.info("Processing event", extra={
-            'event_id': event_id,
-            'queue_file': path
-        })
+        logger.info(
+            "Processing event", extra={"event_id": event_id, "queue_file": path}
+        )
 
         # Synthesize playbook
         play = synthesize(evt)
@@ -211,14 +226,17 @@ def process_event(path: str) -> bool:
         safety_result = approve_playbook(play, evt)
 
         if not safety_result.approved:
-            logger.warning("Playbook failed safety checks", extra={
-                'event_id': event_id,
-                'reasons': safety_result.reasons
-            })
+            logger.warning(
+                "Playbook failed safety checks",
+                extra={"event_id": event_id, "reasons": safety_result.reasons},
+            )
 
-            log_audit_event(logger, 'playbook_rejected',
-                           incident_id=event_id,
-                           reasons=safety_result.reasons)
+            log_audit_event(
+                logger,
+                "playbook_rejected",
+                incident_id=event_id,
+                reasons=safety_result.reasons,
+            )
 
             # Move to failed queue
             failed_dir = os.path.join(os.path.dirname(path), "failed")
@@ -226,10 +244,10 @@ def process_event(path: str) -> bool:
             failed_path = os.path.join(failed_dir, os.path.basename(path))
             os.rename(path, failed_path)
 
-            logger.info("Event moved to failed queue", extra={
-                'event_id': event_id,
-                'path': failed_path
-            })
+            logger.info(
+                "Event moved to failed queue",
+                extra={"event_id": event_id, "path": failed_path},
+            )
             return False
 
         # Write artifacts
@@ -238,29 +256,32 @@ def process_event(path: str) -> bool:
         # Remove from queue
         os.remove(path)
 
-        logger.info("Event processed successfully", extra={
-            'event_id': event_id,
-            'incident_id': inc_id
-        })
+        logger.info(
+            "Event processed successfully",
+            extra={"event_id": event_id, "incident_id": inc_id},
+        )
 
         return True
 
     except Exception as e:
-        logger.error("Failed to process event", extra={
-            'event_id': event_id,
-            'queue_file': path,
-            'error': str(e)
-        }, exc_info=True)
+        logger.error(
+            "Failed to process event",
+            extra={"event_id": event_id, "queue_file": path, "error": str(e)},
+            exc_info=True,
+        )
         return False
 
 
-def loop():
+def loop():  # noqa: C901
     """Main processing loop"""
-    logger.info("AI Generator started", extra={
-        'queue_dir': QUEUE_DIR,
-        'library_dir': LIB_DIR,
-        'poll_interval': POLL_INTERVAL
-    })
+    logger.info(
+        "AI Generator started",
+        extra={
+            "queue_dir": QUEUE_DIR,
+            "library_dir": LIB_DIR,
+            "poll_interval": POLL_INTERVAL,
+        },
+    )
 
     consecutive_errors = 0
     max_consecutive_errors = 10
@@ -280,17 +301,18 @@ def loop():
                         if success:
                             consecutive_errors = 0  # Reset on success
                     except Exception as e:
-                        logger.error("Event processing exception", extra={
-                            'path': path,
-                            'error': str(e)
-                        })
+                        logger.error(
+                            "Event processing exception",
+                            extra={"path": path, "error": str(e)},
+                        )
                         consecutive_errors += 1
 
             # Check for too many consecutive errors
             if consecutive_errors >= max_consecutive_errors:
-                logger.error("Too many consecutive errors, exiting", extra={
-                    'consecutive_errors': consecutive_errors
-                })
+                logger.error(
+                    "Too many consecutive errors, exiting",
+                    extra={"consecutive_errors": consecutive_errors},
+                )
                 sys.exit(1)
 
             # Sleep before next poll
@@ -300,7 +322,7 @@ def loop():
             logger.info("Shutting down gracefully")
             break
         except Exception as e:
-            logger.error("Loop error", extra={'error': str(e)}, exc_info=True)
+            logger.error("Loop error", extra={"error": str(e)}, exc_info=True)
             consecutive_errors += 1
             time.sleep(POLL_INTERVAL)
 

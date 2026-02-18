@@ -1,6 +1,7 @@
 """
 Comprehensive safety checks for generated Ansible playbooks
 """
+
 import yaml
 import re
 from typing import Dict, List, Any
@@ -10,6 +11,7 @@ from dataclasses import dataclass
 @dataclass
 class SafetyCheckResult:
     """Result of safety check evaluation"""
+
     approved: bool
     reasons: List[str]
     warnings: List[str] = None
@@ -24,42 +26,42 @@ class PlaybookSafetyChecker:
 
     # Dangerous modules that should never be allowed
     BANNED_MODULES = [
-        'shell',  # Too risky without strict validation
-        'command',  # Prefer specific modules
-        'raw',  # Bypasses normal checks
-        'script',  # Executes arbitrary scripts
+        "shell",  # Too risky without strict validation
+        "command",  # Prefer specific modules
+        "raw",  # Bypasses normal checks
+        "script",  # Executes arbitrary scripts
     ]
 
     # High-risk modules requiring extra scrutiny
     HIGH_RISK_MODULES = [
-        'file',  # Can delete files
-        'lineinfile',  # Can modify system files
-        'replace',  # Can modify system files
-        'user',  # Creates/modifies users
-        'group',  # Creates/modifies groups
-        'service',  # Stops services
-        'systemd',  # System control
-        'reboot',  # Reboots systems
-        'firewalld',  # Modifies firewall
-        'iptables',  # Modifies firewall
+        "file",  # Can delete files
+        "lineinfile",  # Can modify system files
+        "replace",  # Can modify system files
+        "user",  # Creates/modifies users
+        "group",  # Creates/modifies groups
+        "service",  # Stops services
+        "systemd",  # System control
+        "reboot",  # Reboots systems
+        "firewalld",  # Modifies firewall
+        "iptables",  # Modifies firewall
     ]
 
     # Dangerous patterns in task names or content
     DANGEROUS_PATTERNS = [
-        r'rm\s+-rf',  # Recursive delete
-        r'dd\s+if=',  # Disk operations
-        r'mkfs',  # Format filesystem
-        r'fdisk',  # Partition operations
-        r'\bkill\b.*-9',  # Force kill
-        r'shutdown',  # System shutdown
-        r'init\s+0',  # System halt
-        r'init\s+6',  # System reboot
+        r"rm\s+-rf",  # Recursive delete
+        r"dd\s+if=",  # Disk operations
+        r"mkfs",  # Format filesystem
+        r"fdisk",  # Partition operations
+        r"\bkill\b.*-9",  # Force kill
+        r"shutdown",  # System shutdown
+        r"init\s+0",  # System halt
+        r"init\s+6",  # System reboot
     ]
 
     # Required safety features
     REQUIRED_FEATURES = {
-        'check_mode': ['check_mode: yes', 'check_mode: true'],
-        'approval_gate': ['approve_change', 'assert']
+        "check_mode": ["check_mode: yes", "check_mode: true"],
+        "approval_gate": ["approve_change", "assert"],
     }
 
     def __init__(self):
@@ -75,19 +77,26 @@ class PlaybookSafetyChecker:
                 continue
 
             # Check tasks
-            for task in play.get('tasks', []):
+            for task in play.get("tasks", []):
                 if not isinstance(task, dict):
                     continue
 
                 # Check for state-changing operations
-                task_modules = [k for k in task.keys() if not k.startswith('_') and k not in ['name', 'when', 'tags', 'register']]
+                task_modules = [
+                    k
+                    for k in task.keys()
+                    if not k.startswith("_")
+                    and k not in ["name", "when", "tags", "register"]
+                ]
 
                 for module in task_modules:
                     # Verify check_mode is set
-                    if task.get('check_mode') in [True, 'yes', 'true']:
+                    if task.get("check_mode") in [True, "yes", "true"]:
                         has_check_mode = True
                     elif module in self.HIGH_RISK_MODULES:
-                        self.warnings.append(f"High-risk module '{module}' without explicit check_mode")
+                        self.warnings.append(
+                            f"High-risk module '{module}' without explicit check_mode"
+                        )
 
         return has_check_mode
 
@@ -100,14 +109,14 @@ class PlaybookSafetyChecker:
                 continue
 
             # Check pre_tasks for approval assertion
-            for task in play.get('pre_tasks', []):
+            for task in play.get("pre_tasks", []):
                 if not isinstance(task, dict):
                     continue
 
                 # Look for assert with approve_change
-                if 'assert' in task:
-                    assert_content = str(task['assert'])
-                    if 'approve_change' in assert_content:
+                if "assert" in task:
+                    assert_content = str(task["assert"])
+                    if "approve_change" in assert_content:
                         has_approval = True
 
         return has_approval
@@ -120,13 +129,19 @@ class PlaybookSafetyChecker:
             if not isinstance(play, dict):
                 continue
 
-            for task in play.get('tasks', []) + play.get('pre_tasks', []) + play.get('post_tasks', []):
+            for task in (
+                play.get("tasks", [])
+                + play.get("pre_tasks", [])
+                + play.get("post_tasks", [])
+            ):
                 if not isinstance(task, dict):
                     continue
 
                 for module in self.BANNED_MODULES:
                     if module in task:
-                        self.errors.append(f"Banned module '{module}' found in task: {task.get('name', 'unnamed')}")
+                        self.errors.append(
+                            f"Banned module '{module}' found in task: {task.get('name', 'unnamed')}"
+                        )
                         found_dangerous = True
 
         return not found_dangerous
@@ -151,11 +166,13 @@ class PlaybookSafetyChecker:
             if not isinstance(play, dict):
                 continue
 
-            hosts = play.get('hosts', '')
-            if hosts in ['all', '*']:
-                self.errors.append(f"Playbook targets '{hosts}' - too broad, must use specific inventory groups")
+            hosts = play.get("hosts", "")
+            if hosts in ["all", "*"]:
+                self.errors.append(
+                    f"Playbook targets '{hosts}' - too broad, must use specific inventory groups"
+                )
                 safe_targeting = False
-            elif not hosts or hosts == '':
+            elif not hosts or hosts == "":
                 self.errors.append("Playbook has no hosts defined")
                 safe_targeting = False
 
@@ -181,10 +198,12 @@ class PlaybookSafetyChecker:
 
     def check_event_severity(self, evt: Dict) -> bool:
         """Check if event severity requires additional controls"""
-        severity = evt.get('alert', {}).get('severity', 5)
+        severity = evt.get("alert", {}).get("severity", 5)
 
         if severity >= 8:
-            self.warnings.append(f"High severity ({severity}) - recommend dual approval")
+            self.warnings.append(
+                f"High severity ({severity}) - recommend dual approval"
+            )
 
         return True
 
@@ -219,30 +238,32 @@ class PlaybookSafetyChecker:
         # 5. Check for check_mode
         has_check_mode = self.check_check_mode(playbook)
         if not has_check_mode:
-            self.errors.append("No check_mode found in playbook - all state-changing tasks must have check_mode enabled")
+            self.errors.append(
+                "No check_mode found in playbook - all state-changing tasks must have check_mode enabled"
+            )
 
         # 6. Check for approval gate
         has_approval = self.check_approval_gate(playbook)
         if not has_approval:
-            self.errors.append("No approval gate found - playbook must assert approve_change variable")
+            self.errors.append(
+                "No approval gate found - playbook must assert approve_change variable"
+            )
 
         # 7. Check event severity
         self.check_event_severity(evt)
 
         # Determine approval
         approved = (
-            valid_yaml and
-            safe_patterns and
-            safe_modules and
-            safe_targeting and
-            has_check_mode and
-            has_approval
+            valid_yaml
+            and safe_patterns
+            and safe_modules
+            and safe_targeting
+            and has_check_mode
+            and has_approval
         )
 
         return SafetyCheckResult(
-            approved=approved,
-            reasons=self.errors,
-            warnings=self.warnings
+            approved=approved, reasons=self.errors, warnings=self.warnings
         )
 
 

@@ -2,9 +2,9 @@
 Universal syslog parser supporting RFC 3164, RFC 5424, CEF, and LEEF formats.
 Includes keyword-based threat classification for LLM-free operation.
 """
+
 import re
 from datetime import datetime
-from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Severity / facility mappings
@@ -15,11 +15,26 @@ SYSLOG_SEV_MAP = {0: 10, 1: 9, 2: 8, 3: 7, 4: 6, 5: 4, 6: 2, 7: 1}
 
 # Syslog facility codes → human label
 FACILITY_NAMES = {
-    0: "kernel", 1: "user", 2: "mail", 3: "daemon", 4: "auth",
-    5: "syslog", 6: "lpr", 7: "news", 8: "uucp", 9: "cron",
-    10: "authpriv", 11: "ftp", 16: "local0", 17: "local1",
-    18: "local2", 19: "local3", 20: "local4", 21: "local5",
-    22: "local6", 23: "local7",
+    0: "kernel",
+    1: "user",
+    2: "mail",
+    3: "daemon",
+    4: "auth",
+    5: "syslog",
+    6: "lpr",
+    7: "news",
+    8: "uucp",
+    9: "cron",
+    10: "authpriv",
+    11: "ftp",
+    16: "local0",
+    17: "local1",
+    18: "local2",
+    19: "local3",
+    20: "local4",
+    21: "local5",
+    22: "local6",
+    23: "local7",
 }
 
 # ---------------------------------------------------------------------------
@@ -28,32 +43,138 @@ FACILITY_NAMES = {
 
 # Ordered by priority (first match wins).  Each entry: (category, sev_floor, [keywords])
 THREAT_RULES = [
-    ("malware",             9, ["malware", "ransomware", "trojan", "virus", "worm",
-                                "cryptominer", "rootkit", "spyware", "botnet"]),
-    ("malware",             8, ["suspicious process", "process injection", "hollowing",
-                                "reflective dll", "shellcode", "cobalt strike", "meterpreter"]),
-    ("intrusion_detection", 8, ["exploit", "remote code execution", "rce", "buffer overflow",
-                                "sql injection", "command injection", "privilege escalation",
-                                "lateral movement", "pass-the-hash", "pass the hash",
-                                "kerberoasting", "golden ticket", "silver ticket"]),
-    ("intrusion_detection", 7, ["brute force", "brute-force", "password spray",
-                                "credential stuffing", "authentication failure",
-                                "failed password", "login failure", "logon failure",
-                                "too many authentication failures"]),
-    ("user_compromise",     8, ["account compromised", "unauthorized access",
-                                "impossible travel", "anomalous login"]),
-    ("user_compromise",     6, ["user disabled", "account locked", "account disabled",
-                                "password change", "permission change", "privilege granted",
-                                "added to group", "new admin"]),
-    ("intrusion_detection", 6, ["port scan", "network scan", "nmap", "reconnaissance",
-                                "blocked", "denied access", "firewall drop",
-                                "ids alert", "ips alert", "snort", "suricata",
-                                "connection refused", "invalid user"]),
-    ("intrusion_detection", 5, ["failed", "failure", "error", "refused", "rejected",
-                                "forbidden", "unauthorized"]),
-    ("configuration_change", 4, ["config change", "policy change", "rule added",
-                                 "rule removed", "settings modified", "sudo",
-                                 "setuid", "chmod 777"]),
+    (
+        "malware",
+        9,
+        [
+            "malware",
+            "ransomware",
+            "trojan",
+            "virus",
+            "worm",
+            "cryptominer",
+            "rootkit",
+            "spyware",
+            "botnet",
+        ],
+    ),
+    (
+        "malware",
+        8,
+        [
+            "suspicious process",
+            "process injection",
+            "hollowing",
+            "reflective dll",
+            "shellcode",
+            "cobalt strike",
+            "meterpreter",
+        ],
+    ),
+    (
+        "intrusion_detection",
+        8,
+        [
+            "exploit",
+            "remote code execution",
+            "rce",
+            "buffer overflow",
+            "sql injection",
+            "command injection",
+            "privilege escalation",
+            "lateral movement",
+            "pass-the-hash",
+            "pass the hash",
+            "kerberoasting",
+            "golden ticket",
+            "silver ticket",
+        ],
+    ),
+    (
+        "intrusion_detection",
+        7,
+        [
+            "brute force",
+            "brute-force",
+            "password spray",
+            "credential stuffing",
+            "authentication failure",
+            "failed password",
+            "login failure",
+            "logon failure",
+            "too many authentication failures",
+        ],
+    ),
+    (
+        "user_compromise",
+        8,
+        [
+            "account compromised",
+            "unauthorized access",
+            "impossible travel",
+            "anomalous login",
+        ],
+    ),
+    (
+        "user_compromise",
+        6,
+        [
+            "user disabled",
+            "account locked",
+            "account disabled",
+            "password change",
+            "permission change",
+            "privilege granted",
+            "added to group",
+            "new admin",
+        ],
+    ),
+    (
+        "intrusion_detection",
+        6,
+        [
+            "port scan",
+            "network scan",
+            "nmap",
+            "reconnaissance",
+            "blocked",
+            "denied access",
+            "firewall drop",
+            "ids alert",
+            "ips alert",
+            "snort",
+            "suricata",
+            "connection refused",
+            "invalid user",
+        ],
+    ),
+    (
+        "intrusion_detection",
+        5,
+        [
+            "failed",
+            "failure",
+            "error",
+            "refused",
+            "rejected",
+            "forbidden",
+            "unauthorized",
+        ],
+    ),
+    (
+        "configuration_change",
+        4,
+        [
+            "config change",
+            "policy change",
+            "rule added",
+            "rule removed",
+            "settings modified",
+            "sudo",
+            "setuid",
+            "chmod 777",
+        ],
+    ),
 ]
 
 # Severity boost keywords (applied on top of syslog priority)
@@ -94,46 +215,46 @@ def _clamp(value: int, lo: int = 1, hi: int = 10) -> int:
 # ---------------------------------------------------------------------------
 
 _RFC5424_RE = re.compile(
-    r"^<(\d{1,3})>(\d+)\s+"          # priority, version
-    r"(\S+)\s+"                        # timestamp
-    r"(\S+)\s+"                        # hostname
-    r"(\S+)\s+"                        # app-name
-    r"(\S+)\s+"                        # procid
-    r"(\S+)\s+"                        # msgid
-    r"(\S+)\s*"                        # structured-data
-    r"(.*)$",                          # message
+    r"^<(\d{1,3})>(\d+)\s+"  # priority, version
+    r"(\S+)\s+"  # timestamp
+    r"(\S+)\s+"  # hostname
+    r"(\S+)\s+"  # app-name
+    r"(\S+)\s+"  # procid
+    r"(\S+)\s+"  # msgid
+    r"(\S+)\s*"  # structured-data
+    r"(.*)$",  # message
     re.DOTALL,
 )
 
 _RFC3164_RE = re.compile(
-    r"^<(\d{1,3})>"                    # priority
+    r"^<(\d{1,3})>"  # priority
     r"(\w{3}\s+\d{1,2}\s+[\d:]+)\s+"  # timestamp (Mmm DD HH:MM:SS)
-    r"(\S+)\s+"                        # hostname
-    r"(.+)$",                          # tag + message
+    r"(\S+)\s+"  # hostname
+    r"(.+)$",  # tag + message
     re.DOTALL,
 )
 
 _CEF_RE = re.compile(
     r"^(?:<\d+>)?(?:\w{3}\s+\d{1,2}\s+[\d:]+\s+\S+\s+)?"  # optional syslog header
-    r"CEF:(\d+)\|"                     # CEF version
-    r"([^|]*)\|"                       # device vendor
-    r"([^|]*)\|"                       # device product
-    r"([^|]*)\|"                       # device version
-    r"([^|]*)\|"                       # signature id
-    r"([^|]*)\|"                       # name
-    r"(\d+)\|"                         # severity (0-10)
-    r"(.*)",                           # extensions
+    r"CEF:(\d+)\|"  # CEF version
+    r"([^|]*)\|"  # device vendor
+    r"([^|]*)\|"  # device product
+    r"([^|]*)\|"  # device version
+    r"([^|]*)\|"  # signature id
+    r"([^|]*)\|"  # name
+    r"(\d+)\|"  # severity (0-10)
+    r"(.*)",  # extensions
     re.DOTALL,
 )
 
 _LEEF_RE = re.compile(
     r"^(?:<\d+>)?(?:\w{3}\s+\d{1,2}\s+[\d:]+\s+\S+\s+)?"  # optional syslog header
-    r"LEEF:(\d+\.\d+|\d+)\|"          # LEEF version
-    r"([^|]*)\|"                       # vendor
-    r"([^|]*)\|"                       # product
-    r"([^|]*)\|"                       # version
-    r"([^|]*)\|?"                      # event id
-    r"(.*)",                           # attributes
+    r"LEEF:(\d+\.\d+|\d+)\|"  # LEEF version
+    r"([^|]*)\|"  # vendor
+    r"([^|]*)\|"  # product
+    r"([^|]*)\|"  # version
+    r"([^|]*)\|?"  # event id
+    r"(.*)",  # attributes
     re.DOTALL,
 )
 
@@ -167,6 +288,7 @@ def _ts_now() -> str:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def detect_format(raw: str) -> str:
     """Return detected format: 'cef', 'leef', 'rfc5424', 'rfc3164', or 'raw'."""
@@ -211,6 +333,7 @@ def parse(raw: str, source_ip: str = "0.0.0.0") -> dict:
 # Format-specific parsers
 # ---------------------------------------------------------------------------
 
+
 def _parse_rfc3164(raw: str, source_ip: str) -> dict:
     m = _RFC3164_RE.match(raw.strip())
     if not m:
@@ -219,7 +342,6 @@ def _parse_rfc3164(raw: str, source_ip: str) -> dict:
     priority = int(m.group(1))
     facility = priority >> 3
     syslog_sev = priority & 0x07
-    timestamp_str = m.group(2)
     hostname = m.group(3)
     rest = m.group(4)
 
@@ -257,7 +379,10 @@ def _parse_rfc3164(raw: str, source_ip: str) -> dict:
         "message": message[:2000],
         "log": {
             "syslog": {
-                "facility": {"code": facility, "name": FACILITY_NAMES.get(facility, str(facility))},
+                "facility": {
+                    "code": facility,
+                    "name": FACILITY_NAMES.get(facility, str(facility)),
+                },
                 "severity": {"code": syslog_sev},
             }
         },
@@ -296,12 +421,18 @@ def _parse_rfc5424(raw: str, source_ip: str) -> dict:
             "risk_score": float(risk_score),
             "techniques": [],
         },
-        "host": {"hostname": hostname if hostname != "-" else source_ip, "ip": source_ip},
+        "host": {
+            "hostname": hostname if hostname != "-" else source_ip,
+            "ip": source_ip,
+        },
         "indicator": {},
         "message": message[:2000],
         "log": {
             "syslog": {
-                "facility": {"code": facility, "name": FACILITY_NAMES.get(facility, str(facility))},
+                "facility": {
+                    "code": facility,
+                    "name": FACILITY_NAMES.get(facility, str(facility)),
+                },
                 "severity": {"code": syslog_sev},
             }
         },

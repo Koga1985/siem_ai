@@ -1,13 +1,17 @@
 """
 Unit tests for playbook safety checks
 """
-import pytest
-import sys
+
 import os
+import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../services/ai_generator'))
+import pytest
 
-from safety_checks import PlaybookSafetyChecker, approve_playbook, SafetyCheckResult
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "../services/ai_generator")
+)  # noqa: E402
+
+from safety_checks import SafetyCheckResult, approve_playbook  # noqa: E402
 
 
 @pytest.fixture
@@ -105,7 +109,7 @@ def test_event():
     """Sample security event"""
     return {
         "event": {"id": "test-123", "category": "malware"},
-        "alert": {"severity": 7, "rule": "test-rule", "risk_score": 80}
+        "alert": {"severity": 7, "rule": "test-rule", "risk_score": 80},
     }
 
 
@@ -124,28 +128,28 @@ class TestPlaybookSafetyChecker:
         result = approve_playbook(unsafe_playbook_no_check_mode, test_event)
 
         assert result.approved is False
-        assert any('check_mode' in reason for reason in result.reasons)
+        assert any("check_mode" in reason for reason in result.reasons)
 
     def test_banned_module_fails(self, unsafe_playbook_banned_module, test_event):
         """Test that banned modules fail"""
         result = approve_playbook(unsafe_playbook_banned_module, test_event)
 
         assert result.approved is False
-        assert any('shell' in reason.lower() for reason in result.reasons)
+        assert any("shell" in reason.lower() for reason in result.reasons)
 
     def test_all_hosts_fails(self, unsafe_playbook_all_hosts, test_event):
         """Test that targeting 'all' hosts fails"""
         result = approve_playbook(unsafe_playbook_all_hosts, test_event)
 
         assert result.approved is False
-        assert any('all' in reason.lower() for reason in result.reasons)
+        assert any("all" in reason.lower() for reason in result.reasons)
 
     def test_missing_approval_fails(self, unsafe_playbook_no_approval, test_event):
         """Test that missing approval gate fails"""
         result = approve_playbook(unsafe_playbook_no_approval, test_event)
 
         assert result.approved is False
-        assert any('approval' in reason.lower() for reason in result.reasons)
+        assert any("approval" in reason.lower() for reason in result.reasons)
 
     def test_invalid_yaml_fails(self, test_event):
         """Test that invalid YAML fails"""
@@ -153,7 +157,7 @@ class TestPlaybookSafetyChecker:
         result = approve_playbook(invalid_yaml, test_event)
 
         assert result.approved is False
-        assert any('yaml' in reason.lower() for reason in result.reasons)
+        assert any("yaml" in reason.lower() for reason in result.reasons)
 
     def test_dangerous_pattern_detection(self, test_event):
         """Test detection of dangerous patterns"""
@@ -178,7 +182,7 @@ class TestPlaybookSafetyChecker:
         """Test that high severity events generate warnings"""
         high_severity_event = {
             "event": {"id": "test-456", "category": "critical"},
-            "alert": {"severity": 9, "rule": "critical-rule", "risk_score": 95}
+            "alert": {"severity": 9, "rule": "critical-rule", "risk_score": 95},
         }
 
         result = approve_playbook(safe_playbook, high_severity_event)
@@ -186,14 +190,14 @@ class TestPlaybookSafetyChecker:
         # Should still approve but with warnings
         assert result.approved is True
         assert len(result.warnings) > 0
-        assert any('severity' in warning.lower() for warning in result.warnings)
+        assert any("severity" in warning.lower() for warning in result.warnings)
 
     def test_empty_playbook_fails(self, test_event):
         """Test that empty playbook fails"""
         result = approve_playbook("", test_event)
 
         assert result.approved is False
-        assert any('empty' in reason.lower() for reason in result.reasons)
+        assert any("empty" in reason.lower() for reason in result.reasons)
 
 
 class TestSafetyCheckResult:
@@ -209,9 +213,7 @@ class TestSafetyCheckResult:
     def test_result_with_warnings(self):
         """Test result creation with warnings"""
         result = SafetyCheckResult(
-            approved=True,
-            reasons=[],
-            warnings=["High severity event"]
+            approved=True, reasons=[], warnings=["High severity event"]
         )
 
         assert result.approved is True

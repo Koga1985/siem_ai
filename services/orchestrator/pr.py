@@ -9,11 +9,12 @@ LIB = os.getenv("LIB_DIR", "/repo/playbooks/_library")
 # Severity → label + CSS colour
 _SEV_BANDS = [
     (9, "CRITICAL", "#c0392b"),
-    (7, "HIGH",     "#e74c3c"),
-    (5, "MEDIUM",   "#e67e22"),
-    (3, "LOW",      "#f1c40f"),
-    (0, "INFO",     "#27ae60"),
+    (7, "HIGH", "#e74c3c"),
+    (5, "MEDIUM", "#e67e22"),
+    (3, "LOW", "#f1c40f"),
+    (0, "INFO", "#27ae60"),
 ]
+
 
 def _sev_label_color(sev: int):
     for floor, label, color in _SEV_BANDS:
@@ -47,14 +48,23 @@ def _load_incident_meta(inc_id: str) -> dict:
         }
     except Exception:
         return {
-            "id": inc_id, "severity": 0, "sev_label": "?", "sev_color": "#95a5a6",
-            "category": "unknown", "rule": "unknown", "host": "unknown",
-            "src_ip": "", "indicator_ip": "", "techniques": "",
-            "timestamp": "", "message": "", "dataset": "",
+            "id": inc_id,
+            "severity": 0,
+            "sev_label": "?",
+            "sev_color": "#95a5a6",
+            "category": "unknown",
+            "rule": "unknown",
+            "host": "unknown",
+            "src_ip": "",
+            "indicator_ip": "",
+            "techniques": "",
+            "timestamp": "",
+            "message": "",
+            "dataset": "",
         }
 
 
-T = '''<!doctype html>
+T = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -149,7 +159,7 @@ T = '''<!doctype html>
 </p>
 </body>
 </html>
-'''
+"""
 
 
 @app.route("/")
@@ -180,9 +190,11 @@ def download(inc, kind):
 @app.post("/approve/<inc>")
 def approve(inc):
     inc = os.path.basename(inc)
-    cmd = (f"ansible-playbook playbooks/run_generated.yml "
-           f"-e incident={inc} -e approve_change=true "
-           f"-i inventories/lab/hosts.ini")
+    cmd = (
+        f"ansible-playbook playbooks/run_generated.yml "
+        f"-e incident={inc} -e approve_change=true "
+        f"-i inventories/lab/hosts.ini"
+    )
     return (
         f"<html><body style='font-family:sans-serif;background:#1a1a2e;color:#e0e0e0;padding:20px'>"
         f"<h2 style='color:#27ae60'>Approved: {inc}</h2>"

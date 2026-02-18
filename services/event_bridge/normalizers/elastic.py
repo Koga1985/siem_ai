@@ -22,17 +22,21 @@ Typical Elastic SIEM alert payload (ECS 8.x):
         ...
     }
 """
-from datetime import datetime
 
+from datetime import datetime
 
 # Elastic severity strings → int (1-10)
 _ELASTIC_SEV = {
-    "critical": 10, "high": 8, "medium": 5, "low": 3,
-    "informational": 2, "info": 2,
+    "critical": 10,
+    "high": 8,
+    "medium": 5,
+    "low": 3,
+    "informational": 2,
+    "info": 2,
 }
 
 
-def map_elastic(payload: dict) -> dict:
+def map_elastic(payload: dict) -> dict:  # noqa: C901
     """
     Normalise an Elastic/ECS alert payload into ECS-min format.
     """
@@ -42,17 +46,21 @@ def map_elastic(payload: dict) -> dict:
     # ------------------------------------------------------------------
     # Timestamp
     # ------------------------------------------------------------------
-    ts = (payload.get("@timestamp")
-          or payload.get("timestamp")
-          or datetime.utcnow().isoformat() + "Z")
+    ts = (
+        payload.get("@timestamp")
+        or payload.get("timestamp")
+        or datetime.utcnow().isoformat() + "Z"
+    )
 
     # ------------------------------------------------------------------
     # Event metadata
     # ------------------------------------------------------------------
     evt_block = payload.get("event", {})
-    event_id = (evt_block.get("id")
-                or payload.get("kibana.alert.uuid")
-                or "es-" + str(abs(hash(str(payload)))))
+    event_id = (
+        evt_block.get("id")
+        or payload.get("kibana.alert.uuid")
+        or "es-" + str(abs(hash(str(payload))))
+    )
 
     # category can be a list (ECS 8) or a string
     raw_cat = evt_block.get("category", "unknown")
@@ -65,19 +73,23 @@ def map_elastic(payload: dict) -> dict:
     # Rule / alert name
     # ------------------------------------------------------------------
     rule_block = payload.get("rule", {})
-    rule_name = (rule_block.get("name")
-                 or payload.get("kibana.alert.rule.name")
-                 or payload.get("signal", {}).get("rule", {}).get("name")
-                 or "elastic_alert")
+    rule_name = (
+        rule_block.get("name")
+        or payload.get("kibana.alert.rule.name")
+        or payload.get("signal", {}).get("rule", {}).get("name")
+        or "elastic_alert"
+    )
 
     # ------------------------------------------------------------------
     # Severity
     # ------------------------------------------------------------------
     # Priority: kibana.alert.severity > rule.severity > event.severity > numeric
-    raw_sev = (payload.get("kibana.alert.severity")
-               or rule_block.get("severity")
-               or evt_block.get("severity")
-               or payload.get("signal", {}).get("rule", {}).get("severity"))
+    raw_sev = (
+        payload.get("kibana.alert.severity")
+        or rule_block.get("severity")
+        or evt_block.get("severity")
+        or payload.get("signal", {}).get("rule", {}).get("severity")
+    )
 
     if isinstance(raw_sev, str):
         severity = _ELASTIC_SEV.get(raw_sev.lower().strip(), 5)
@@ -89,9 +101,11 @@ def map_elastic(payload: dict) -> dict:
     # ------------------------------------------------------------------
     # Risk score
     # ------------------------------------------------------------------
-    raw_risk = (payload.get("kibana.alert.risk_score")
-                or rule_block.get("risk_score")
-                or payload.get("signal", {}).get("rule", {}).get("risk_score"))
+    raw_risk = (
+        payload.get("kibana.alert.risk_score")
+        or rule_block.get("risk_score")
+        or payload.get("signal", {}).get("rule", {}).get("risk_score")
+    )
     try:
         risk_score = float(raw_risk) if raw_risk is not None else float(severity * 10)
     except (ValueError, TypeError):
@@ -141,9 +155,7 @@ def map_elastic(payload: dict) -> dict:
     # ------------------------------------------------------------------
     # Message
     # ------------------------------------------------------------------
-    message = (payload.get("message")
-               or payload.get("kibana.alert.reason")
-               or "")
+    message = payload.get("message") or payload.get("kibana.alert.reason") or ""
 
     return {
         "@timestamp": ts,
